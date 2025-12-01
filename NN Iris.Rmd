@@ -1,0 +1,92 @@
+# Setup
+
+Load necessary packages. This time we will be using some additional packages from mlr3
+```{r setup}
+library(mlr3)
+library(mlr3learners)
+library(ggplot2)
+library(data.table)
+library(mlr3pipelines)
+library(mlr3viz)
+library(mlr3tuning)
+```
+
+For this exercise we will use a few additional features provided by mlr3, specifically pipeline operators and tuners. Pipeline operators are useful when managing input data, and enable you to do a handful of transformations or quickly use alternative representations. Tuners are useful for quickly and effectively finding optimal hyper parameters for your models.
+
+To start, we will once again load the iris data set. This time, we will be using a neural network which uses Sepal length, sepal width, and species to try and predict petal length.
+```{r}
+data = iris[, c("Sepal.Length", "Sepal.Width","Species", "Petal.Length")]
+head(data)
+```
+# Using pipeline operators
+
+Now that we have loaded our data, we will create a task for our model to work on. In this instance our target is petal length (instead of species like previously)
+```{r}
+# Create a regression task using Petal.Length
+
+```
+
+Now, you may have noticed a problem with our dataset. Neural networks can only recive inputs in the form of numbers, but we have species as an input variable in the form of characters. we can solve this issue with something called a one-hot encoding.
+```{r}
+# Define one-hot encoder pipeline operator
+
+
+# Train the pipeline (apply one-hot encoding)
+
+```
+when we train the pipeline operator, it will process any of the data in our task that is not the target of the task in accordance with our specifications. In this case, it has applied a one-hot encoding to any non-numeric data that arent the target variable
+
+
+we can now view the encoded data
+```{r}
+# Get the one-hot encoded data
+
+```
+# Using tuners
+
+Now that our data is prepared to for use in our model, we can continue with creating our model. First we need to create a new task using our newly encoded data.
+```{r}
+
+```
+
+Next we define the learner. As we could see with the k-nn model, hyper parameters can heavily impact the performance of the model. In order to make sure that we pick the optimal parameters we will set them up with a tuner in mind.
+```{r}
+# Create the learner. We will set any needed hyperparameters to be determined by the tuner using to_tune()
+
+```
+
+
+Next we need to define our training/testing split
+```{r}
+set.seed(3)
+
+```
+
+
+Now we can set up our tuner. We will have our tuner work by performing cross validation on each version of our neural network that we create for the different values of our hyperparameters. we will use the root mean square error in our predictions to determine which hyperparameter/hyperparameter combination performs the best
+```{r}
+
+```
+
+Next we have the tuner optimize our model
+```{r}
+
+```
+
+Now that our tuner has found the best hyperparameter values for our model, we can use them in our actual model
+```{r}
+
+```
+
+Now that we have our model ready to go, we can train it on our training data
+```{r}
+
+```
+And then test the model with the testing data
+```{r}
+
+```
+We can also check the accuracy of our model visually by plotting our models predicted values against the actual values of petal length for each testing flower
+```{r}
+
+```

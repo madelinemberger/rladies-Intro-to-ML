@@ -1,0 +1,87 @@
+#Setup
+
+First we will load the packages that we are using to do machine learning. This will include `mlr3`, as well as the relevant helper packages for `mlr3` such as `mlr3learners`. I am also including `tidyverse` and `ggplot2` for data management and visualization.
+
+```{r setup}
+library(mlr3)
+library(mlr3learners)
+library(ggplot2)
+library(tidyverse)
+```
+
+First, we will load our data set. We are going to use the "iris" data set which contains information about different flowers, and has different measurements for each flower, as well as the species of the flower. Our goal will be to create a model which uses information about the flower to try and predict its species.
+
+```{r}
+#View the iris dataset
+head(iris)
+```
+
+For the sake of creating a nice figure at the end, we will start by trying to use only 2 measurements as inputs: sepal length and petal length.
+
+```{r}
+# Create a new data set that is just sepal length, petal length, and species
+iris2d = iris[, c("Sepal.Length", "Petal.Length", "Species")]
+head(iris2d)
+```
+
+# Using mlr3
+
+Now that we have our data, we can begin by creating an mlr3 task. The task will contain our data, and idicate what our output/response variable is (its assumed that all other columns in our dataset are inputs/features). Also, when we create the task we must decide whether it is a classification task or regression task.
+
+```{r}
+# Create the mlr3 task and specify the id, backend, and target
+task = TaskClassif$new(id = "taskID", backend = iris2d, target = "Species")
+```
+
+Now that we have created our task, we can specify the type of mlr3 "learner" (i.e. ML model) that we want to use on it. In this instance, we will use a k-nearest neighbors model.
+
+```{r}
+# Create the mlr3 learner. We need to specify the type of model and any model hyper-parameters
+learner = lrn("classif.kknn", k = 5)
+```
+
+The next step is to partition our data into a training and testing set. We can use this with mlr3's inbuilt `partition()` function
+
+```{r}
+#set seed for reproducibility
+set.seed(2)
+
+#Save the split data
+split = partition(task, ratio = 0.8)
+```
+
+After splitting the data, we need to train our model. We can do this by calling the `train()` function on our learner and giving it the task we want it to accomplish as well as specifying what segment of our data is to be used for training.
+
+```{r}
+learner$train(task, row_ids = split$train)
+```
+
+Now that we have trained our model, we can use it to try and predict the species of flowers that it hasn't been trained on. (i.e. the data from our test set). We will now generate predictions and determine the accuracy of our model.
+
+```{r}
+prediction = learner$predict(task, row_ids = split$test)
+print(prediction$score(msr("classif.acc")))
+```
+
+# Visualizing results
+
+Below I have gone ahead and included the code necesary to create a figure showing the data provided to the model, as well as the decision boundaries drawn by the model.
+
+```{r}
+xrange = range(iris2d$Sepal.Length)
+yrange = range(iris2d$Petal.Length)
+
+grid = as.data.table(expand.grid(
+  Sepal.Length = seq(xrange[1], xrange[2], length.out = 200),
+  Petal.Length = seq(yrange[1], yrange[2], length.out = 200)
+))
+
+grid$Species = learner$predict_newdata(grid)$response
+
+ggplot() +
+  geom_tile(data = grid, aes(x = Sepal.Length, y = Petal.Length, fill = Species), alpha = 0.3) +
+  geom_point(data = iris2d, aes(x = Sepal.Length, y = Petal.Length, color = Species), size = 2) +
+  labs(title = "KNN Decision Boundaries (k = 5)",
+       x = "Sepal Length", y = "Petal Length") +
+  theme_minimal()
+```
